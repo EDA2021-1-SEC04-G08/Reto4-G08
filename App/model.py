@@ -39,6 +39,15 @@ los mismos.
 
 # Construccion de modelos
 
+def newCatalog():
+    catalog = {'stops': None,
+               'connections': None,
+               'components': None,
+               'paths': None}
+    
+    catalog['stops'] = mp.newMap(numelements= )
+
+
 # Funciones para agregar informacion al catalogo
 
 # Funciones para creacion de datos

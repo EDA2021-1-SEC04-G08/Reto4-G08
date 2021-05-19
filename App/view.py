@@ -36,8 +36,13 @@ operación solicitada
 
 def printMenu():
     print("Bienvenido")
-    print("1- Cargar información en el catálogo")
-    print("2- ")
+    print("1- Inicializar catalogo")
+    print("2- Cargar información en el catálogo")
+    print("3- Identificar clusteres de comunicacion")
+    print("4- Identificar puntos de conexion criticos en la red")
+    print("5- Identificar ruta de menor distancia")
+    print("6- Identificar Infraestructura critica de la red")
+    print("7- Analisis de fallas")
 
 catalog = None
 
