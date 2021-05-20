@@ -34,6 +34,12 @@ se hace la solicitud al controlador para ejecutar la
 operación solicitada
 """
 
+connectionsFile = 'connections.csv'
+countriesFile = 'countries.csv'
+LpFile = 'landing_points.csv'
+InitialPoint = None
+
+
 def printMenu():
     print("Bienvenido")
     print("1- Inicializar catalogo")
@@ -53,11 +59,16 @@ while True:
     printMenu()
     inputs = input('Seleccione una opción para continuar\n')
     if int(inputs[0]) == 1:
-        print("Cargando información de los archivos ....")
+        print("\nInicializando....")
+        catalog = controller.init()
+        print('Se inicializo el catalogo\n')
 
     elif int(inputs[0]) == 2:
-        pass
-
+        print("\nCargando información de los archivos ....")
+        controller.loadConnections(catalog, connectionsFile)
+        controller.loadCountries(catalog, countriesFile)
+        controller.loadLp(catalog, LpFile)
+        print("Se cargo la informacion del catalogo\n")
     else:
         sys.exit(0)
 sys.exit(0)
