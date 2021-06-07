@@ -66,9 +66,29 @@ while True:
     elif int(inputs[0]) == 2:
         print("\nCargando información de los archivos ....")
         controller.loadConnections(catalog, connectionsFile)
-        controller.loadCountries(catalog, countriesFile)
-        controller.loadLp(catalog, LpFile)
+        r2 = controller.loadCountries(catalog, countriesFile)
+        r1 = controller.loadLp(catalog, LpFile)
         print("Se cargo la informacion del catalogo\n")
+        numVert = controller.totalVertex(catalog)
+        numArcos = controller.totalConnections(catalog)
+        numCountries = controller.totalCountries(catalog)
+        primer_lp = r1[1]
+        ultimo_pais = r2[1]
+
+        print('Total de landing points: ' + str(numVert))
+        print('Total de conexiones: ' + str(numArcos))
+        print('Total de Paises: ' + str(numCountries))
+        print('Informacion del primer landing point cargado: ' + 'Identificador: ' + primer_lp['landing_point_id'] + ', Nombre: ' + primer_lp['name'] +
+              ', Latitud: ' + primer_lp['latitude'] + ', Longitud: ' + primer_lp['longitude'])
+        print('Informacion del ultimo pais cargado: ' + ' Poblacion: ' + ultimo_pais['Population'] + 
+              ', Usuarios de internet: ' + ultimo_pais['Internet users'])
+
+    elif int(inputs[0]) == 3:
+        lp1 = input('Ingrese el landing point de inicio: ')
+        lp2 = input('Ingrese el landing point final: ')
+        r = controller.getClusters(catalog, lp1, lp2)
+        print('El numero de clusteres es: ' + str(r[0]))
+        print('¿Los landing points ingresados estan fuertemente conectados?: ' + str(r[1]))
     else:
         sys.exit(0)
 sys.exit(0)

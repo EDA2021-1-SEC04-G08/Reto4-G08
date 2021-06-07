@@ -40,38 +40,63 @@ def init():
 
 
 def loadConnections(catalog, connectionsFile):
-    connectionsFile = cf.data_dir + connectionsFile
-    input_file = csv.DictReader(open(connectionsFile, encoding="utf-8"),
+    cFile = cf.data_dir + connectionsFile
+    input_file = csv.DictReader(open(cFile, encoding="utf-8"),
                                 delimiter=",")
-    lastConnection = None
+
     for connection in input_file:
-        if lastConnection is not None:
-            sameConnection = lastConnection['cable_id'] == connection['cable_id']
-            sameStop = lastConnection['destination'] == connection['destination']
-            if sameConnection and not sameStop:
-                model.addStopConnection(catalog, lastConnection, connection)
-        lastConnection = connection
-    model.addRouteConnections(catalog)
+        model.addConnection(catalog, connection)
 
     return catalog
 
 
 def loadCountries(catalog, countriesFile):
-    countriesFile = cf.data_dir + countriesFile
-    input_file = csv.DictReader(open(countriesFile, encoding="utf-8"),
+    cFile = cf.data_dir + countriesFile
+    input_file = csv.DictReader(open(cFile, encoding="utf-8"),
                                 delimiter=",")
+    size = len(input_file)
+    i = 0
+    last_country = 0
     for country in input_file:
+        if i == (size-1):
+            last_country = country
+
         model.addCountry(catalog, country)
-    return catalog
+        i += 1
+
+    return catalog, last_country
 
 
 def loadLp(catalog, LpFile):
-    LpFile = cf.data_dir + LpFile
-    input_file = csv.DictReader(open(LpFile, encoding="utf-8"),
+    cFile = cf.data_dir + LpFile
+    input_file = csv.DictReader(open(cFile, encoding="utf-8"),
                                 delimiter=",")
+    i = 0
+    primer_lp = 0
     for lp in input_file:
+        if i == 0:
+            primer_lp = lp
+
         model.addLp(catalog, lp)
-    return catalog
+        i += 1
+    return catalog, primer_lp
+
+# Funciones de consulta
+
+def totalVertex(catalog):
+    return model.totalVertex(catalog)
+
+
+def totalConnections(catalog):
+    return model.totalConnections(catalog)
+
+
+def totalCountries(catalog):
+    return model.totalCountries(catalog)
+
+
+def getClusters(catalog, lp1, lp2):
+    return model.getClusters(catalog, lp1, lp2)
 
 # Funciones de ordenamiento
 

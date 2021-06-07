@@ -25,6 +25,7 @@
  """
 
 
+from os import name
 import config as cf
 from DISClib.ADT import list as lt
 from DISClib.ADT import map as mp
@@ -33,7 +34,7 @@ from DISClib.Algorithms.Sorting import shellsort as sa
 from DISClib.ADT.graph import gr
 from DISClib.Algorithms.Graphs import scc
 from DISClib.Algorithms.Graphs import dijsktra as djk
-from re import split
+from math import *
 assert cf
 
 """
@@ -44,78 +45,54 @@ los mismos.
 # Construccion de modelos
 
 def newCatalog():
-    catalog = {'stops': None,
-               'connections': None,
-               'components': None,
-               'paths': None,
+    catalog = {'connections': None,
+               'countries_con': None,
                'countries': None,
                'landing_points': None}
     
-    catalog['stops'] = mp.newMap(numelements= 3300,
-                                 maptype='PROBING',
-                                 comparefunction=compareLd)
-
     catalog['connections'] = gr.newGraph(datastructure='ADJ_LIST',
                                          directed=True,
-                                         size=3300,
+                                         size=14000,
                                          comparefunction=compareLd)
+
+    catalog['countries_con'] = mp.newMap(numelements= 14000,
+                                         maptype='PROBING',
+                                         comparefunction=compareroutes)
     
-    catalog['countries'] = lt.newList('ARRAY_LIST')
-    catalog['landing_points'] = lt.newList('ARRAY_LIST')
+    catalog['countries'] = mp.newMap(numelements= 14000,
+                                     maptype='PROBING',
+                                     comparefunction=compareroutes)
+        
+    catalog['landing_points'] = mp.newMap(numelements= 14000,
+                                          maptype='PROBING',
+                                          comparefunction=compareroutes)
 
     return catalog
-
 
 # Funciones para agregar informacion al catalogo
 
 
-def addStopConnection(catalog, lastConnection, connection):
-    origin = formatVertex(lastConnection)
-    destination = formatVertex(connection)
-    cleanConnectionDistance(connection)
-    distance = connection['cable_length']
-    addStop(catalog, origin)
-    addStop(catalog, destination)
-    addConnection(catalog, origin, destination, distance)
-    addRouteStop(catalog, connection)
-    addRouteStop(catalog, lastConnection)
+def addConnection(catalog, connection):
+    cable_name = connection['cable_name']
+    origin = formatVertex(catalog, connection['origin'], cable_name)
+    destination = formatVertex(catalog, connection['destination'], cable_name)
+    distance = getConnectionDistance(catalog, connection)
+    addLp(catalog, origin)
+    addLp(catalog, destination)
+    addArco(catalog, origin, destination, distance)
+    capacity = float(connection['capacityTBPS'])
+    connection_name = origin + ', ' + destination + ', ' + cable_name
+    addCapitalLp(catalog, connection, destination, connection_name, capacity)
     return catalog
 
 
-def addStop(catalog, stopid):
+def addLp(catalog, stopid):
     if not gr.containsVertex(catalog['connections'], stopid):
         gr.insertVertex(catalog['connections'], stopid)
     return catalog
 
 
-def addRouteStop(catalog, connection):
-    entry = mp.get(catalog['stops'], connection['destination'])
-    if entry is None:
-        lstroutes = lt.newList(cmpfunction=compareroutes)
-        lt.addLast(lstroutes, connection['cable_id'])
-        mp.put(catalog['stops'], connection['destination'], lstroutes)
-    else:
-        lstroutes = entry['value']
-        info = connection['cable_id']
-        if not lt.isPresent(lstroutes, info):
-            lt.addLast(lstroutes, info)
-    return catalog
-
-
-def addRouteConnections(catalog):
-    lststops = mp.keySet(catalog['stops'])
-    for key in lt.iterator(lststops):
-        lstroutes = mp.get(catalog['stops'], key)['value']
-        prevrout = None
-        for route in lt.iterator(lstroutes):
-            route = key + '-' + route
-            if prevrout is not None:
-                addConnection(catalog, prevrout, route, 0)
-                addConnection(catalog, route, prevrout, 0)
-            prevrout = route
-
-
-def addConnection(catalog, origin, destination, distance):
+def addArco(catalog, origin, destination, distance):
     edge = gr.getEdge(catalog['connections'], origin, destination)
     if edge is None:
         gr.addEdge(catalog['connections'], origin, destination, distance)
@@ -123,17 +100,79 @@ def addConnection(catalog, origin, destination, distance):
 
 
 def addCountry(catalog, country):
-    lt.addLast(catalog['countries'], country)
+    mp.put(catalog['countries'], country['CountryName'].lower(), country)
     return catalog
 
 
 def addLp(catalog, lp):
-    lt.addLast(catalog['landing_points'], lp)
+    mp.put(catalog['landing_points'],int(lp['landing_point_id']), lp)
+    return catalog
+
+
+def addCapitalLp(catalog, connection, destination, connection_name, capacity):
+    lp = mp.get(catalog['landing_points'], int(connection['destination']))
+    entry = me.getValue(lp)
+    name = entry['name'].split(', ')
+    name_size = len(name)
+
+    if name_size == 3:
+        country = name[2].lower()
+    elif name_size == 2:
+        country = name[1].lower()
+    else:
+        country = 'None'
+
+    if mp.contains(catalog['countries_con'], country):
+        info = mp.get(catalog['countries_con'], country)
+        lista = me.getValue(info)
+ 
+    else:
+        lista = lt.newList('ARRAY_LIST')
+    lt.addLast(lista, {'name':connection_name, 'capacityTBPS':capacity, 'destination':destination})
+
+    getCapital = mp.get(catalog['countries'], country)
+    entry2 = me.getValue(getCapital)
+    capital = [country, entry2['CapitalName']]
+    addLp(catalog['connections'], capital)
+
+    min = 1000000
+
+    for con in lt.iterator(lista):
+        if con['capacity'] < min:
+            min = con['capacity']
+
+    for con in lt.iterator(lista):
+        if con['destination'] != destination:
+            addArco(catalog, destination, con['destination'], 0.1)
+            
+    addArco(catalog, destination, capital, min)
+    mp.put(catalog['countries_con'], country, lista)
+    
     return catalog
 
 # Funciones para creacion de datos
 
 # Funciones de consulta
+
+
+def totalVertex(catalog):
+    return gr.numVertices(catalog['connections'])
+
+
+def totalConnections(catalog):
+    return gr.numEdges(catalog['connections'])
+
+
+def totalCountries(catalog):
+    return mp.size(catalog['countries'])
+
+
+def getClusters(catalog, lp1, lp2):
+    clusters = scc.KosarajuSCC(catalog['connections'])
+    num_clusters = scc.connectedComponents(clusters)
+    is_conected = scc.stronglyConnected(clusters, lp1, lp2)
+
+    return (num_clusters, is_conected)
 
 # Funciones utilizadas para comparar elementos dentro de una lista
 
@@ -159,19 +198,37 @@ def compareroutes(route1, route2):
 # Funciones de ordenamiento
 # Funciones helper
 
-def formatVertex(connection):
-    name = connection['destination'] + '-'
-    name = name + connection['cable_id']
+def formatVertex(catalog, connection, cable_name):
+    lp = mp.get(catalog['landing_points'], int(connection))
+    entry = me.getValue(lp)
+    name = entry['id'] + '-'
+    name = name + cable_name
     return name
 
 
-def cleanConnectionDistance(connection):
-    d1 = connection['cable_length']
-    d2 = d1.split(' ')
-    d3 = d2[0].split(',')
-    if len(d3) > 1:
-        d4 = d3[0] + d3[1]
-    else:
-        d4 = d3[0]
-    connection['cable_length'] = d4
+def getConnectionDistance(catalog, connection):
+    origin = connection['origin']
+    lp = mp.get(catalog['landing_points'], int(origin))
+    entry = me.getValue(lp)
+    lat1 = float(entry['latitude'])
+    lon1 = float(entry['longitude'])
 
+    destination = connection['destination']
+    lp = mp.get(catalog['landing_points'], int(destination))
+    entry2 = me.getValue(lp)
+    lat2 = float(entry2['latitude'])
+    lon2 = float(entry2['longitude'])
+
+    distance = funcionHaversine(lat1, lat2, lon1, lon2)
+
+    return distance
+
+def funcionHaversine(lat1, lat2, lon1, lon2):
+    difLat = lat2 - lat1
+    difLon = lon2 - lon1
+
+    a = sin(difLat/2)**2 + (cos(lat1) * cos(lat2) * sin(difLon/2)**2)
+    c = 2 * atan2(sqrt(a), sqrt(1-a))
+    distance = 6371 * c
+
+    return distance
